@@ -1,20 +1,21 @@
-﻿using System;
+﻿using Microsoft.ML.Runtime;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.Learners;
 
-namespace HelloMachineLearning
+namespace HelloMachineLearning.IrisClassification
 {
-    public static class IrisClassifier
+    public class IrisClassifier
     {
-        public static void Main(string[] args)
+        private readonly IHostEnvironment _env = new LocalEnvironment();
+        private TransformerChain<KeyToValueTransform> _model;
+
+        public void Train()
         {
-            // STEP 2: Create an evironment  and load your data
-            var env = new LocalEnvironment();
- 
+
             // If working in Visual Studio, make sure the 'Copy to Output Directory'
             // property of iris-data.txt is set to 'Copy always'
-            string dataPath = "data/iris.data.txt";
-            var reader = new TextLoader(env,
+            string dataPath = "IrisClassification/iris.data.txt";
+            var reader = new TextLoader(_env,
                 new TextLoader.Arguments()
                 {
                     Separator = ",",
@@ -28,34 +29,28 @@ namespace HelloMachineLearning
                         new TextLoader.Column("Label", DataKind.Text, 4)
                     }
                 });
- 
+
             IDataView trainingDataView = reader.Read(new MultiFileSource(dataPath));
- 
+
             // STEP 3: Transform your data and add a learner
             // Assign numeric values to text in the "Label" column, because only
             // numbers can be processed during model training.
             // Add a learning algorithm to the pipeline. e.g.(What type of iris is this?)
             // Convert the Label back into original text (after converting to number in step 3)
-            var pipeline = new TermEstimator(env, "Label", "Label")
-                .Append(new ConcatEstimator(env, "Features", "SepalLength", "SepalWidth", "PetalLength", "PetalWidth"))
-                .Append(new SdcaMultiClassTrainer(env, new SdcaMultiClassTrainer.Arguments()))
-                .Append(new KeyToValueEstimator(env, "PredictedLabel"));
- 
+            var pipeline = new TermEstimator(_env, "Label", "Label")
+                .Append(new ConcatEstimator(_env, "Features", "SepalLength", "SepalWidth", "PetalLength", "PetalWidth"))
+                .Append(new SdcaMultiClassTrainer(_env, new SdcaMultiClassTrainer.Arguments()))
+                .Append(new KeyToValueEstimator(_env, "PredictedLabel"));
+
             // STEP 4: Train your model based on the data set  
-            var model = pipeline.Fit(trainingDataView);
- 
+            _model = pipeline.Fit(trainingDataView);
+        }
+
+        public IrisPrediction Predict(IrisData data)
+        {
             // STEP 5: Use your model to make a prediction
             // You can change these numbers to test different predictions
-            var prediction = model.MakePredictionFunction<IrisData, IrisPrediction>(env).Predict(
-                new IrisData()
-                {
-                    SepalLength = 3.3f,
-                    SepalWidth = 1.6f,
-                    PetalLength = 0.2f,
-                    PetalWidth = 5.1f,
-                });
- 
-            Console.WriteLine($"Predicted flower type is: {prediction.PredictedLabels}");
+            return _model.MakePredictionFunction<IrisData, IrisPrediction>(_env).Predict(data);
         }
     }
 }

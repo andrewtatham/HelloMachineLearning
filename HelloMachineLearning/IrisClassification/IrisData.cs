@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML.Runtime.Api;
 
-namespace HelloMachineLearning
+namespace HelloMachineLearning.IrisClassification
 {
     public class IrisData
     {
